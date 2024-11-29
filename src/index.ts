@@ -1,19 +1,28 @@
 import { ponder } from "@/generated";
 import { transfers } from "../ponder.schema";
+import { cache } from "./cache";
+import { db } from "./db";
 // import { processTransferQueue } from "./workers/processTransferEvent";
 
 /**
  * Do we need to index events from this address
  */
-const isAddressRelevant = (address: string) => {
-	// In future, we might want to store the block number that we want to start indexing from for each address.
-	// This would be the block number when the merchant created their first product/link etc.
-	// Check if the address is relevant to your application.
-	return true;
+const isAddressRelevant = async (address: string, chainId: string) => {
+	const valid = await cache.getOrSet(`watching:${chainId}:${address}`, async () => {
+		return db.merchant.findUnique({
+			where: {
+				address,
+				chains: {
+					has: chainId,
+				},
+			}
+		})
+	});
+	return valid;
 };
 
 ponder.on("BENIS:Transfer", async ({ event, context }) => {
-	if (!isAddressRelevant(event.args.to)) {
+	if (!isAddressRelevant(event.args.to, context.network.name)) {
 		return;
 	}
 
