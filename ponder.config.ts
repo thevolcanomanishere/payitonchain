@@ -3,7 +3,14 @@ import { http } from "viem";
 import { erc20ABI } from "./abis/erc20ABI";
 import { arbitrum } from "viem/chains";
 
+if(!process.env.DATABASE_URL_INDEXER){
+  throw new Error("DATABASE_URL_INDEXER is not set");
+}
 export default createConfig({
+  database: {
+    kind: "postgres",
+    connectionString: process.env.DATABASE_URL_INDEXER,
+  },
   networks: {
     arbitrum: {
       chainId: arbitrum.id,

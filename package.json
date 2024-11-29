@@ -8,7 +8,8 @@
     "codegen": "ponder codegen",
     "serve": "ponder serve",
     "lint": "eslint .",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "server:dev": "tsx watch src/startServer.ts"
   },
   "dependencies": {
     "@fastify/jwt": "^9.0.1",
@@ -19,6 +20,7 @@
     "hono": "^4.6.8",
     "ioredis": "^5.4.1",
     "prisma": "^6.0.0",
+    "tsx": "^4.19.2",
     "viem": "^2.21.37"
   },
   "devDependencies": {

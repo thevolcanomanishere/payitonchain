@@ -1,6 +1,6 @@
 import { ponder } from "@/generated";
 import { transfers } from "../ponder.schema";
-import { processTransferQueue } from "./workers/processTransferEvent";
+// import { processTransferQueue } from "./workers/processTransferEvent";
 
 /**
  * Do we need to index events from this address
@@ -27,16 +27,16 @@ ponder.on("BENIS:Transfer", async ({ event, context }) => {
 		chainId: context.network.name,
 	});
 
-	await processTransferQueue.add(
-		`from: ${event.args.from} to: ${event.args.to} with: ${event.args.amount} for: ${event.log.address} on: ${context.network.name}`,
-		{
-			from: event.args.from,
-			to: event.args.to,
-			timestamp: event.block.timestamp,
-			amount: event.args.amount,
-			token: event.log.address,
-			chainId: context.network.name,
-			hash: event.transaction.hash,
-		},
-	);
+	// await processTransferQueue.add(
+	// 	`from: ${event.args.from} to: ${event.args.to} with: ${event.args.amount} for: ${event.log.address} on: ${context.network.name}`,
+	// 	{
+	// 		from: event.args.from,
+	// 		to: event.args.to,
+	// 		timestamp: event.block.timestamp,
+	// 		amount: event.args.amount,
+	// 		token: event.log.address,
+	// 		chainId: context.network.name,
+	// 		hash: event.transaction.hash,
+	// 	},
+	// );
 });

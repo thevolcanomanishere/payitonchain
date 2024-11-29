@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL_PRISMA")
 }
 
 
@@ -19,7 +19,7 @@ model merchant {
   name      String
   address   String
   webhookUrl String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) 
   updatedAt DateTime @updatedAt
 }
 
@@ -36,13 +36,12 @@ model payment_intent {
   extId     String   
   from      String
   to        String
-  timestamp BigInt
   amount    BigInt
   token     String
   chainId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([from, to, amount, token, chainId])
+  @@unique([from, to, amount, token, chainId, status])
 }
 
