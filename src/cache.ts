@@ -1,7 +1,7 @@
 import { BentoCache, bentostore } from 'bentocache'
 import { memoryDriver } from 'bentocache/drivers/memory'
 import { redisDriver } from 'bentocache/drivers/redis'
-import { redisQueueConnection } from './workers/redisSetup'
+import { redisQueueConnection } from '../workers/redisSetup'
 
 export const cache = new BentoCache({
   default: 'multitier',

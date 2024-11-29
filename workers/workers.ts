@@ -1,21 +1,21 @@
 import { Queue, Worker } from "bullmq";
-import { redisQueueConnection } from "./redisSetup";
-import type { transfers } from "../../ponder.schema";
-import { db, matchTransferToPaymentIntent } from "../db";
-import axios from "axios";
+import type { transfers } from "../ponder.schema";
+import { db, matchTransferToPaymentIntent, setupDb } from "../src/db";
 import { PaymentIntentStatus } from "@prisma/client";
+import { redisQueueConnection } from "./redisSetup";
+import axios from "axios";
 
-export const processTransferQueue = new Queue<typeof transfers.$inferSelect>(
-	"processTransferQueue",
-	{
-		connection: redisQueueConnection,
-	},
-);
 
-export const processTransferWorker = new Worker<typeof transfers.$inferSelect>(
+export const fireWebhookQueue = new Queue("fireWebhookQueue", {
+	connection: redisQueueConnection,
+});
+
+type TransferType = Omit<typeof transfers.$inferSelect, "amount"> & {amount: string};
+
+new Worker<TransferType>(
 	"processTransferQueue",
 	async (job) => {
-		const { from, to, amount, chainId, token, hash, timestamp } = job.data;
+		const { from, to, amount, chainId, token, hash } = job.data;
 
 		await db.$transaction(async (prismaInstance) => {
 			const paymentIntent = await matchTransferToPaymentIntent({
@@ -48,11 +48,9 @@ export const processTransferWorker = new Worker<typeof transfers.$inferSelect>(
 	},
 );
 
-export const fireWebhookQueue = new Queue("fireWebhookQueue", {
-	connection: redisQueueConnection,
-});
 
-export const fireWebhookWorker = new Worker(
+
+new Worker(
 	"fireWebhookQueue",
 	async (job) => {
 		const merchant = await db.merchant.findUnique({

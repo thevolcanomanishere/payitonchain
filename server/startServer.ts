@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import paymentApi from './server';
-import { setupDb } from './db';
+import { setupDb } from '../src/db';
 
 const fastify = Fastify({
   logger: true

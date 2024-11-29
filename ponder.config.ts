@@ -6,6 +6,8 @@ import { arbitrum } from "viem/chains";
 if(!process.env.DATABASE_URL_INDEXER){
   throw new Error("DATABASE_URL_INDEXER is not set");
 }
+
+console.log("tests")
 export default createConfig({
   database: {
     kind: "postgres",

@@ -3,6 +3,10 @@ import type { Address } from "viem";
 
 export let db: PrismaClient;
 export const setupDb = async () => {
+
+	if (db) {
+		return db;
+	}
 	return new Promise((resolve) => {
 		db = new PrismaClient({
 			log: [
@@ -125,17 +129,18 @@ export const matchTransferToPaymentIntent = async ({
 } : {
 	from: Address;
 	to: Address;
-	amount: bigint;
+	amount: string;
 	token: Address;
 	chainId: string;
 	prismaInstance: Prisma.TransactionClient;
 }) => {
+	const amountBigInt = BigInt(amount);
 	return await db.payment_intent.findUnique({
 		where: {
 			from_to_amount_token_chainId_status: {
 				from,
 				to,
-				amount,
+				amount: amountBigInt,
 				token,
 				chainId,
 				status: PaymentIntentStatus.PENDING,

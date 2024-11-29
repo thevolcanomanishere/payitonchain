@@ -11,9 +11,9 @@ import {
 	db,
   getMerchantPaymentsPaginated,
   getPaymentIntent,
-} from "./db"; // Connection to your Ponder database
+} from "../src/db"; // Connection to your Ponder database
 import { type Address, verifyMessage } from "viem";
-import { createMerchant } from "./db";
+import { createMerchant } from "../src/db";
 
 declare module 'fastify' {
   interface FastifyRequest {
