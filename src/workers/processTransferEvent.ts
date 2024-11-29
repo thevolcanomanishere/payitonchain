@@ -55,19 +55,17 @@ export const fireWebhookQueue = new Queue("fireWebhookQueue", {
 export const fireWebhookWorker = new Worker(
 	"fireWebhookQueue",
 	async (job) => {
-
 		const merchant = await db.merchant.findUnique({
 			where: {
 				id: job.data.merchantId,
-			}
-		})
+			},
+		});
 
-		if(!merchant) {
+		if (!merchant) {
 			return `Merchant not found for payment intent ${job.data.id}`;
 		}
 
 		const { webhookUrl } = merchant;
-
 
 		await axios.post(webhookUrl, job.data);
 	},
