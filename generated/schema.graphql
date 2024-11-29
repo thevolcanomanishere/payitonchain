@@ -1,0 +1,110 @@
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+scalar BigInt
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Meta {
+  status: JSON
+}
+
+type Query {
+  transfers(hash: String!): transfers
+  transferss(where: transfersFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): transfersPage!
+  _meta: Meta
+}
+
+type transfers {
+  hash: String!
+  from: String!
+  to: String!
+  timestamp: BigInt!
+  amount: BigInt!
+  token: String!
+  chainId: String!
+}
+
+type transfersPage {
+  items: [transfers!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input transfersFilter {
+  AND: [transfersFilter]
+  OR: [transfersFilter]
+  hash: String
+  hash_not: String
+  hash_in: [String]
+  hash_not_in: [String]
+  hash_contains: String
+  hash_not_contains: String
+  hash_starts_with: String
+  hash_ends_with: String
+  hash_not_starts_with: String
+  hash_not_ends_with: String
+  from: String
+  from_not: String
+  from_in: [String]
+  from_not_in: [String]
+  from_contains: String
+  from_not_contains: String
+  from_starts_with: String
+  from_ends_with: String
+  from_not_starts_with: String
+  from_not_ends_with: String
+  to: String
+  to_not: String
+  to_in: [String]
+  to_not_in: [String]
+  to_contains: String
+  to_not_contains: String
+  to_starts_with: String
+  to_ends_with: String
+  to_not_starts_with: String
+  to_not_ends_with: String
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_in: [BigInt]
+  timestamp_not_in: [BigInt]
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
+  amount: BigInt
+  amount_not: BigInt
+  amount_in: [BigInt]
+  amount_not_in: [BigInt]
+  amount_gt: BigInt
+  amount_lt: BigInt
+  amount_gte: BigInt
+  amount_lte: BigInt
+  token: String
+  token_not: String
+  token_in: [String]
+  token_not_in: [String]
+  token_contains: String
+  token_not_contains: String
+  token_starts_with: String
+  token_ends_with: String
+  token_not_starts_with: String
+  token_not_ends_with: String
+  chainId: String
+  chainId_not: String
+  chainId_in: [String]
+  chainId_not_in: [String]
+  chainId_contains: String
+  chainId_not_contains: String
+  chainId_starts_with: String
+  chainId_ends_with: String
+  chainId_not_starts_with: String
+  chainId_not_ends_with: String
+}
