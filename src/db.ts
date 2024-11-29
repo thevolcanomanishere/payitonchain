@@ -1,4 +1,4 @@
-import { PaymentIntentStatus, PrismaClient } from "@prisma/client";
+import { PaymentIntentStatus, type Prisma, PrismaClient } from "@prisma/client";
 import type { Address } from "viem";
 
 export let db: PrismaClient;
@@ -77,6 +77,7 @@ export const createPaymentIntent = async ({
 	token,
 	chainId,
 	extId,
+	merchantId
 }: {
 	from: Address;
 	to: Address;
@@ -84,6 +85,7 @@ export const createPaymentIntent = async ({
 	token: Address;
 	chainId: string;
 	extId: string;
+	merchantId: string;
 }) => {
 	return await db.payment_intent.create({
 		data: {
@@ -94,6 +96,7 @@ export const createPaymentIntent = async ({
 			chainId,
 			status: PaymentIntentStatus.PENDING,
 			extId,
+			merchantId
 		},
 	});
 };
@@ -110,6 +113,35 @@ export const cancelPaymentIntent = async (id: string) => {
         where: { id },
         data: { status: PaymentIntentStatus.CANCELLED },
     });
+}
+
+export const matchTransferToPaymentIntent = async ({
+	from, 
+	to,
+	amount,
+	token, 
+	chainId,
+	prismaInstance,
+} : {
+	from: Address;
+	to: Address;
+	amount: bigint;
+	token: Address;
+	chainId: string;
+	prismaInstance: Prisma.TransactionClient;
+}) => {
+	return await db.payment_intent.findUnique({
+		where: {
+			from_to_amount_token_chainId_status: {
+				from,
+				to,
+				amount,
+				token,
+				chainId,
+				status: PaymentIntentStatus.PENDING,
+			}
+		}
+	});
 }
 
 export const getMerchantPaymentsPaginated = async ({

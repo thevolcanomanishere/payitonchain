@@ -15,6 +15,7 @@
     "@fastify/jwt": "^9.0.1",
     "@ponder/core": "^0.7.11",
     "@prisma/client": "6.0.0",
+    "axios": "^1.7.8",
     "bullmq": "^5.30.0",
     "fastify": "^5.1.0",
     "hono": "^4.6.8",

@@ -13,14 +13,14 @@ datasource db {
   url      = env("DATABASE_URL_PRISMA")
 }
 
-
 model merchant {
-  id        String   @id @default(cuid())
-  name      String
-  address   String
-  webhookUrl String
-  createdAt DateTime @default(now()) 
-  updatedAt DateTime @updatedAt
+  id             String           @id @default(cuid())
+  name           String
+  address        String
+  webhookUrl     String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  payment_intent payment_intent[]
 }
 
 enum PaymentIntentStatus {
@@ -31,17 +31,18 @@ enum PaymentIntentStatus {
 }
 
 model payment_intent {
-  id        String   @id @default(cuid())
-  status    PaymentIntentStatus
-  extId     String   
-  from      String
-  to        String
-  amount    BigInt
-  token     String
-  chainId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String              @id @default(cuid())
+  status     PaymentIntentStatus
+  extId      String
+  from       String
+  to         String
+  amount     BigInt
+  token      String
+  chainId    String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  merchantId String
+  merchant   merchant            @relation(fields: [merchantId], references: [id])
 
   @@unique([from, to, amount, token, chainId, status])
 }
-
