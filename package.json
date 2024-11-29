@@ -13,10 +13,12 @@
   "dependencies": {
     "@fastify/jwt": "^9.0.1",
     "@ponder/core": "^0.7.11",
+    "@prisma/client": "6.0.0",
     "bullmq": "^5.30.0",
     "fastify": "^5.1.0",
     "hono": "^4.6.8",
     "ioredis": "^5.4.1",
+    "prisma": "^6.0.0",
     "viem": "^2.21.37"
   },
   "devDependencies": {

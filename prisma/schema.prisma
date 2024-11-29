@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model merchant {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  webhookUrl String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PaymentIntentStatus {
+  PENDING
+  COMPLETE
+  FAILED
+  CANCELLED
+}
+
+model payment_intent {
+  id        String   @id @default(cuid())
+  status    PaymentIntentStatus
+  extId     String   
+  from      String
+  to        String
+  timestamp BigInt
+  amount    BigInt
+  token     String
+  chainId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([from, to, amount, token, chainId])
+}
+
