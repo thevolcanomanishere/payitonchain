@@ -60,6 +60,7 @@ interface CreatePaymentIntentBody {
 	token: Address;
 	chainId: string;
 	extId: string;
+	merchantId: string;
 	signature: Address;
 }
 
@@ -133,7 +134,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		"/payment-intents",
 		{},
 		async (request, reply) => {
-			const { from, to, amount, token, chainId, extId, signature } =
+			const { from, to, amount, token, chainId, extId, merchantId, signature } =
 				request.body;
 
 			try {
@@ -171,6 +172,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					token,
 					chainId,
 					extId,
+					merchantId
 				});
 
 				return { paymentIntent };
