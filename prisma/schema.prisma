@@ -49,3 +49,11 @@ model payment_intent {
 
   @@unique([from, to, amount, token, chainId, status])
 }
+
+
+model nonce {
+  id        String   @id @default(cuid())
+  nonce     String   @unique
+  used      DateTime? 
+  createdAt DateTime @default(now())
+}

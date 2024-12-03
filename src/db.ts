@@ -135,7 +135,7 @@ export const matchTransferToPaymentIntent = async ({
 	prismaInstance: Prisma.TransactionClient;
 }) => {
 	const amountBigInt = BigInt(amount);
-	return await db.payment_intent.findUnique({
+	return await prismaInstance.payment_intent.findUnique({
 		where: {
 			from_to_amount_token_chainId_status: {
 				from,

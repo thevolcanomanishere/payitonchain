@@ -14,6 +14,7 @@ import {
 } from "../src/db"; // Connection to your Ponder database
 import { type Address, verifyMessage } from "viem";
 import { createMerchant } from "../src/db";
+import { differenceInHours } from "date-fns";
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -50,6 +51,7 @@ interface CreateMerchantBody {
 	name: string;
 	address: Address;
 	webhookUrl: string;
+	nonce: string;
 	signature: Address;
 }
 
@@ -92,17 +94,45 @@ export default async function paymentApi(fastify: FastifyInstance) {
 			}
 		},
 	);
+ 
+	/** 
+	 * Generate a nonce, store it.
+	 */
+	fastify.get("/nonce", {}, async (request, reply) => {
+		const record = await db.nonce.create({
+			data: {
+				nonce: crypto.randomUUID(),
+			}
+		})
+		
+		return record.nonce
+	});
 
-	// Create merchant account
 	fastify.post<{ Body: CreateMerchantBody }>(
 		"/merchants",
 		{},
 		async (request, reply) => {
-			const { name, address, webhookUrl, signature } = request.body;
+			const { name, address, webhookUrl, signature, nonce } = request.body;
 
 			try {
+
+				// Check if nonce exists
+				const nonceRecord = await db.nonce.findUnique({
+					where: {
+						nonce,
+					}
+				});
+
+				if (!nonceRecord) {
+					return reply.status(400).send({ error: "Invalid nonce" });
+				}
+
+				if(differenceInHours(new Date(), nonceRecord.createdAt) > 1) {
+					return reply.status(400).send({ error: "Nonce expired" });
+				}
+
 				// Verify signature
-				const message = `Register merchant account for ${address} with name ${name}`;
+				const message = `Register merchant account for ${address} with name ${name} and unique key: ${nonce}`;
 				const isAddressValid = await verifyMessage({
 					message,
 					signature,

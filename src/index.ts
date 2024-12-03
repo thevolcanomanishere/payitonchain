@@ -37,6 +37,7 @@ ponder.on("BENIS:Transfer", async ({ event, context }) => {
 		return;
 	}
 
+	// Store the event in the ponder db. Why? Because we can.
 	await context.db.insert(transfers).values({
 		hash: event.transaction.hash,
 		from: event.args.from,
@@ -47,6 +48,7 @@ ponder.on("BENIS:Transfer", async ({ event, context }) => {
 		chainId: context.network.name,
 	});
 
+	// Add the event to the queue for processing
 	await processTransferQueue.add(
 		`from: ${event.args.from} to: ${event.args.to} with: ${event.args.amount} for: ${event.log.address} on: ${context.network.name}`,
 		{

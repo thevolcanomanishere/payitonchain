@@ -12,7 +12,7 @@ export const fireWebhookQueue = new Queue("fireWebhookQueue", {
 
 type TransferType = Omit<typeof transfers.$inferSelect, "amount"> & {amount: string};
 
-new Worker<TransferType>(
+export const processTransferQueueWorker = new Worker<TransferType>(
 	"processTransferQueue",
 	async (job) => {
 		const { from, to, amount, chainId, token, hash } = job.data;
@@ -50,7 +50,7 @@ new Worker<TransferType>(
 
 
 
-new Worker(
+export const fireWebhookQueueWorker = new Worker(
 	"fireWebhookQueue",
 	async (job) => {
 		const merchant = await db.merchant.findUnique({
