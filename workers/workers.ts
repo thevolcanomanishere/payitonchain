@@ -4,6 +4,7 @@ import { db, matchTransferToPaymentIntent, setupDb } from "../src/db";
 import { PaymentIntentStatus } from "@prisma/client";
 import { redisQueueConnection } from "./redisSetup";
 import axios from "axios";
+import { toReadableNumber } from "../utils/numbers";
 
 
 export const fireWebhookQueue = new Queue("fireWebhookQueue", {
@@ -20,16 +21,19 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 		console.table(job.data)
 
 		await db.$transaction(async (prismaInstance) => {
+			const amountConverted = toReadableNumber(amount, token);
+			console.log(`Converted amount ${amount} to ${amountConverted}`);
 			const paymentIntent = await matchTransferToPaymentIntent({
 				from,
 				to,
-				amount,
+				amount: amountConverted,
 				token,
 				chainId,
 				prismaInstance,
 			});
 
 			if (!paymentIntent) {
+				console.log(`No payment intent found for transfer ${hash}`);
 				return `No payment intent found for transfer ${hash}`;
 			}
 

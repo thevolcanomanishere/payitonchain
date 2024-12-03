@@ -29,7 +29,7 @@ type transfers {
   timestamp: BigInt!
   amount: BigInt!
   token: String!
-  chainId: String!
+  chainId: Int!
 }
 
 type transfersPage {
@@ -97,14 +97,12 @@ input transfersFilter {
   token_ends_with: String
   token_not_starts_with: String
   token_not_ends_with: String
-  chainId: String
-  chainId_not: String
-  chainId_in: [String]
-  chainId_not_in: [String]
-  chainId_contains: String
-  chainId_not_contains: String
-  chainId_starts_with: String
-  chainId_ends_with: String
-  chainId_not_starts_with: String
-  chainId_not_ends_with: String
+  chainId: Int
+  chainId_not: Int
+  chainId_in: [Int]
+  chainId_not_in: [Int]
+  chainId_gt: Int
+  chainId_lt: Int
+  chainId_gte: Int
+  chainId_lte: Int
 }

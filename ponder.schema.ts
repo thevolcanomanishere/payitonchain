@@ -8,5 +8,5 @@ export const transfers = onchainTable("transfers", (t) => ({
   timestamp: t.bigint().notNull(),
   amount: t.bigint().notNull(),
   token: t.hex().notNull(),
-  chainId: t.text().notNull(),
+  chainId: t.integer().notNull(),
 }));

@@ -53,14 +53,15 @@ interface CreateMerchantBody {
 	webhookUrl: string;
 	nonce: string;
 	signature: Address;
+	chainIds: number[];
 }
 
 interface CreatePaymentIntentBody {
 	from: Address;
 	to: Address;
-	amount: string;
+	amount: number;
 	token: Address;
-	chainId: string;
+	chainId: number;
 	extId: string;
 	merchantId: string;
 	signature: Address;
@@ -118,7 +119,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		"/merchants",
 		{},
 		async (request, reply) => {
-			const { name, address, webhookUrl, signature, nonce } = request.body;
+			const { name, address, webhookUrl, signature, nonce, chainIds } = request.body;
 
 			console.log("/merchants: ")
 			console.table(request.body)
@@ -159,7 +160,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					return reply.status(400).send({ error: "Invalid webhook URL" });
 				}
 
-				const merchant = await createMerchant({ name, address, webhookUrl });
+				const merchant = await createMerchant({ name, address, webhookUrl, chainIds });
 
 				console.table(merchant)
 
@@ -202,7 +203,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 				const existingPayment = await checkForOutstandingPaymentIntent({
 					from,
 					to,
-					amount: BigInt(amount),
+					amount,
 					chainId,
 					token,
 				});
@@ -218,7 +219,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 				const paymentIntent = await createPaymentIntent({
 					from,
 					to,
-					amount: BigInt(amount),
+					amount,
 					token,
 					chainId,
 					extId,

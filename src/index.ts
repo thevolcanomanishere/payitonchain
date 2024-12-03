@@ -15,7 +15,8 @@ const processTransferQueue = new Queue("processTransferQueue", {
 /**
  * Do we need to index events from this address
  */
-const isAddressRelevant = async (address: string, chainId: string) => {
+const isAddressRelevant = async (address: string, chainId: number) => {
+	console.log(`Checking if ${address} is relevant for ${chainId}`);
 	const valid = await cache.getOrSet(
 		`watching:${chainId}:${address}`,
 		async () => {
@@ -23,17 +24,18 @@ const isAddressRelevant = async (address: string, chainId: string) => {
 				where: {
 					address,
 					chains: {
-						has: chainId,
+						has: chainId
 					},
 				},
 			});
 		},
 	);
+	console.log(`Address ${address} is ${valid ? "relevant" : "not relevant"} for ${chainId}`);
 	return valid;
 };
 
 ponder.on("BENIS:Transfer", async ({ event, context }) => {
-	if (!isAddressRelevant(event.args.to, context.network.name)) {
+	if (!isAddressRelevant(event.args.to, context.network.chainId)) {
 		return;
 	}
 
@@ -45,7 +47,7 @@ ponder.on("BENIS:Transfer", async ({ event, context }) => {
 		timestamp: event.block.timestamp,
 		amount: event.args.amount,
 		token: event.log.address,
-		chainId: context.network.name,
+		chainId: context.network.chainId,
 	});
 
 	// Add the event to the queue for processing
@@ -56,7 +58,7 @@ ponder.on("BENIS:Transfer", async ({ event, context }) => {
 			to: event.args.to,
 			amount: event.args.amount.toString(),
 			token: event.log.address,
-			chainId: context.network.name,
+			chainId: context.network.chainId,
 			hash: event.transaction.hash,
 		},
 	);

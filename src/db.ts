@@ -1,4 +1,5 @@
 import { PaymentIntentStatus, type Prisma, PrismaClient } from "@prisma/client";
+import type { Decimal } from "@prisma/client/runtime/library";
 import type { Address } from "viem";
 
 export let db: PrismaClient;
@@ -37,12 +38,14 @@ export const createMerchant = async ({
 	name,
 	address,
 	webhookUrl,
-}: { name: string; address: Address; webhookUrl: string }) => {
+	chainIds
+}: { name: string; address: Address; webhookUrl: string; chainIds: number[] }) => {
 	return await db.merchant.create({
 		data: {
 			name,
 			address,
 			webhookUrl,
+			chains: chainIds
 		},
 	});
 };
@@ -56,9 +59,9 @@ export const checkForOutstandingPaymentIntent = async ({
 }: {
 	from: Address;
 	to: Address;
-	amount: bigint;
+	amount: number;
 	token: Address;
-	chainId: string;
+	chainId: number;
 }) => {
     return await db.payment_intent.findUnique({
         where: {
@@ -85,9 +88,9 @@ export const createPaymentIntent = async ({
 }: {
 	from: Address;
 	to: Address;
-	amount: bigint;
+	amount: number;
 	token: Address;
-	chainId: string;
+	chainId: number;
 	extId: string;
 	merchantId: string;
 }) => {
@@ -129,18 +132,17 @@ export const matchTransferToPaymentIntent = async ({
 } : {
 	from: Address;
 	to: Address;
-	amount: string;
+	amount: string | Decimal;
 	token: Address;
-	chainId: string;
+	chainId: number;
 	prismaInstance: Prisma.TransactionClient;
 }) => {
-	const amountBigInt = BigInt(amount);
 	return await prismaInstance.payment_intent.findUnique({
 		where: {
 			from_to_amount_token_chainId_status: {
 				from,
 				to,
-				amount: amountBigInt,
+				amount,
 				token,
 				chainId,
 				status: PaymentIntentStatus.PENDING,
