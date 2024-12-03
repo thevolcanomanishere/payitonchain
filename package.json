@@ -9,7 +9,7 @@
     "serve": "ponder serve",
     "lint": "eslint .",
     "typecheck": "tsc",
-    "server:dev": "tsx watch src/startServer.ts",
+    "server:dev": "tsx watch server/startServer.ts",
     "worker:dev": "tsx watch workers/index.ts"
   },
   "dependencies": {

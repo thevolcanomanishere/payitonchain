@@ -6,4 +6,6 @@ if(!process.env.REDIS_URL) {
 
 console.log("Connecting to Redis at", process.env.REDIS_URL);
 
-export const redisQueueConnection = new Redis(process.env.REDIS_URL);
+export const redisQueueConnection = new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: null
+});

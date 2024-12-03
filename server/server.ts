@@ -83,10 +83,14 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		"authenticate",
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
+
+				console.log(`Authenticate: ${JSON.stringify(request.headers)}`)
 				await request.jwtVerify();
 				const merchant = await db.merchant.findUnique({
 					where: { id: (request.user as { merchantId: string }).merchantId },
 				});
+
+				console.log(`Merchant: ${JSON.stringify(merchant)}`)
 				if (!merchant) throw new Error("Merchant not found");
 				request.merchant = merchant;
 			} catch (err) {
@@ -104,6 +108,8 @@ export default async function paymentApi(fastify: FastifyInstance) {
 				nonce: crypto.randomUUID(),
 			}
 		})
+
+		console.log(`Nonce: ${record.nonce}`)
 		
 		return record.nonce
 	});
@@ -113,6 +119,9 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		{},
 		async (request, reply) => {
 			const { name, address, webhookUrl, signature, nonce } = request.body;
+
+			console.log("/merchants: ")
+			console.table(request.body)
 
 			try {
 
@@ -127,12 +136,15 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					return reply.status(400).send({ error: "Invalid nonce" });
 				}
 
+				console.table(nonceRecord)
+
 				if(differenceInHours(new Date(), nonceRecord.createdAt) > 1) {
 					return reply.status(400).send({ error: "Nonce expired" });
 				}
 
 				// Verify signature
 				const message = `Register merchant account for ${address} with name ${name} and unique key: ${nonce}`;
+				console.log(`Message: ${message}`)
 				const isAddressValid = await verifyMessage({
 					message,
 					signature,
@@ -148,6 +160,8 @@ export default async function paymentApi(fastify: FastifyInstance) {
 				}
 
 				const merchant = await createMerchant({ name, address, webhookUrl });
+
+				console.table(merchant)
 
 				const token = await reply.jwtSign({ merchantId: merchant.id });
 				return { merchant, token };
@@ -166,10 +180,14 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		async (request, reply) => {
 			const { from, to, amount, token, chainId, extId, merchantId, signature } =
 				request.body;
+			
+			console.log("/payment-intents: ")
+			console.table(request.body)
 
 			try {
 				// Verify signature
 				const message = `Create payment intent: to=${to} amount=${amount} token=${token} chainId=${chainId} extId=${extId}`;
+				console.log(`Message: ${message}`)
 				const isAddressValid = verifyMessage({
 					message,
 					signature,
@@ -188,6 +206,8 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					chainId,
 					token,
 				});
+				
+				console.table(existingPayment)
 
 				if (existingPayment) {
 					return reply
@@ -204,6 +224,9 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					extId,
 					merchantId
 				});
+
+				console.log("Payment intent: ")
+				console.table(paymentIntent)
 
 				return { paymentIntent };
 			} catch (error) {

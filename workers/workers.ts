@@ -17,6 +17,8 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 	async (job) => {
 		const { from, to, amount, chainId, token, hash } = job.data;
 
+		console.table(job.data)
+
 		await db.$transaction(async (prismaInstance) => {
 			const paymentIntent = await matchTransferToPaymentIntent({
 				from,
@@ -31,6 +33,8 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 				return `No payment intent found for transfer ${hash}`;
 			}
 
+			console.log(`Matched transfer ${hash} to payment intent ${paymentIntent.id}`);
+
 			const updatedPaymentIntent = await prismaInstance.payment_intent.update({
 				where: {
 					id: paymentIntent.id,
@@ -39,6 +43,8 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 					status: PaymentIntentStatus.COMPLETE,
 				},
 			});
+
+			console.log(`Updated payment intent ${updatedPaymentIntent.id} to status ${updatedPaymentIntent.status}`);
 
 			await fireWebhookQueue.add("fireWebhook", updatedPaymentIntent);
 		});
@@ -62,6 +68,8 @@ export const fireWebhookQueueWorker = new Worker(
 		if (!merchant) {
 			return `Merchant not found for payment intent ${job.data.id}`;
 		}
+
+		console.log(`Firing webhook for merchant ${merchant.id}`);
 
 		const { webhookUrl } = merchant;
 
