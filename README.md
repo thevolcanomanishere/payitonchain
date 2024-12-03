@@ -60,6 +60,81 @@ Start workers
 pnpm run worker:dev
 ```
 
+# Payment API Documentation
+
+## Merchant Account Creation
+
+1. Get a nonce:
+```bash
+GET /nonce
+```
+
+2. Create merchant account:
+```bash
+POST /merchants
+Content-Type: application/json
+
+{
+  "name": "Merchant Name",
+  "address": "0x...", // Merchant wallet address
+  "webhookUrl": "https://...",
+  "nonce": "received-nonce",
+  "signature": "0x...", // Sign message: "Register merchant account for {address} with name {name} and unique key: {nonce}"
+  "chainIds": [1, 137] // Supported chain IDs
+}
+
+Response: {
+  "merchant": {...},
+  "token": "jwt-token" // Store this for authentication
+}
+```
+
+## Payment Flow
+
+1. Create payment intent:
+```bash
+POST /payment-intents
+Content-Type: application/json
+
+{
+  "from": "0x...", // Buyer address
+  "to": "0x...", // Merchant address
+  "amount": 1000000, // Amount in wei
+  "token": "0x...", // Token contract address
+  "chainId": 1,
+  "extId": "order-123",
+  "merchantId": "merchant-uuid",
+  "signature": "0x..." // Sign message: "Create payment intent: to={to} amount={amount} token={token} chainId={chainId} extId={extId}"
+}
+```
+
+2. Cancel payment (if needed):
+```bash
+POST /payment-intents/:id/cancel
+Content-Type: application/json
+
+{
+  "from": "0x...", // Must match original buyer
+  "signature": "0x..." // Sign message: "Cancel payment intent {id}"
+}
+```
+
+## View Payments
+
+```bash
+GET /payments
+Authorization: Bearer jwt-token
+
+Response: {
+  "payments": [...]
+}
+```
+
+Key Notes:
+- All signatures must be from the corresponding wallet addresses
+- Merchants can only have one pending payment per buyer
+- Webhook URL must include "http"
+- JWT token required for authenticated endpoints
 
 
 #### Components
