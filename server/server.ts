@@ -5,24 +5,27 @@ import Fastify, {
 } from "fastify";
 import fastifyJwt from "@fastify/jwt";
 import {
-  cancelPaymentIntent,
+	cancelPaymentIntent,
 	checkForOutstandingPaymentIntent,
 	createPaymentIntent,
 	db,
-  getMerchantPaymentsPaginated,
-  getPaymentIntent,
+	getMerchantPaymentsPaginated,
+	getPaymentIntent,
 } from "../src/db"; // Connection to your Ponder database
-import { type Address, verifyMessage } from "viem";
+import { type Address, getAddress, verifyMessage } from "viem";
 import { createMerchant } from "../src/db";
 import { differenceInHours } from "date-fns";
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    merchant?: Merchant 
-  }
-  interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
-  }
+declare module "fastify" {
+	interface FastifyRequest {
+		merchant?: Merchant;
+	}
+	interface FastifyInstance {
+		authenticate: (
+			request: FastifyRequest,
+			reply: FastifyReply,
+		) => Promise<void>;
+	}
 }
 
 // Types based on your schema
@@ -84,14 +87,13 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		"authenticate",
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
-
-				console.log(`Authenticate: ${JSON.stringify(request.headers)}`)
+				console.log(`Authenticate: ${JSON.stringify(request.headers)}`);
 				await request.jwtVerify();
 				const merchant = await db.merchant.findUnique({
 					where: { id: (request.user as { merchantId: string }).merchantId },
 				});
 
-				console.log(`Merchant: ${JSON.stringify(merchant)}`)
+				console.log(`Merchant: ${JSON.stringify(merchant)}`);
 				if (!merchant) throw new Error("Merchant not found");
 				request.merchant = merchant;
 			} catch (err) {
@@ -99,53 +101,91 @@ export default async function paymentApi(fastify: FastifyInstance) {
 			}
 		},
 	);
- 
-	/** 
+
+	/**
 	 * Generate a nonce, store it.
 	 */
 	fastify.get("/nonce", {}, async (request, reply) => {
 		const record = await db.nonce.create({
 			data: {
 				nonce: crypto.randomUUID(),
-			}
-		})
+			},
+		});
 
-		console.log(`Nonce: ${record.nonce}`)
-		
-		return record.nonce
+		console.log(`Nonce: ${record.nonce}`);
+
+		return record.nonce;
+	});
+
+	fastify.post<{
+		Body: {
+			address: Address;
+			signature: Address;
+			nonce: string;
+		};
+	}>("/merchants/login", {}, async (request, reply) => {
+		const { address, signature, nonce } = request.body;
+
+		const message = `Login merchant for address ${address} with nonce ${nonce}`;
+		const isAddressValid = await verifyMessage({
+			message,
+			signature,
+			address,
+		});
+
+		if (!isAddressValid) {
+			return reply.status(400).send({ error: "Invalid signature" });
+		}
+
+		const merchant = await db.merchant.findUnique({
+			where: { address: getAddress(address) },
+		});
+
+		if (!merchant) {
+			return reply.status(404).send({ error: "Merchant not found" });
+		}
+
+		await db.nonce.update({
+			where: {
+				nonce,
+			},
+			data: {
+				used: new Date(),
+			},
+		});
+
+		const token = await reply.jwtSign({ merchantId: merchant.id });
+		return { merchant, token };
 	});
 
 	fastify.post<{ Body: CreateMerchantBody }>(
-		"/merchants",
+		"/merchants/signup",
 		{},
 		async (request, reply) => {
-			const { name, address, webhookUrl, signature, nonce, chainIds } = request.body;
-
-			console.log("/merchants: ")
-			console.table(request.body)
+			const { name, address, webhookUrl, signature, nonce, chainIds } =
+				request.body;
 
 			try {
-
 				// Check if nonce exists
 				const nonceRecord = await db.nonce.findUnique({
 					where: {
 						nonce,
-					}
+					},
 				});
 
 				if (!nonceRecord) {
 					return reply.status(400).send({ error: "Invalid nonce" });
 				}
 
-				console.table(nonceRecord)
+				console.table(nonceRecord);
 
-				if(differenceInHours(new Date(), nonceRecord.createdAt) > 1) {
+				if (differenceInHours(new Date(), nonceRecord.createdAt) > 1) {
 					return reply.status(400).send({ error: "Nonce expired" });
 				}
 
 				// Verify signature
 				const message = `Register merchant account for ${address} with name ${name} and unique key: ${nonce}`;
-				console.log(`Message: ${message}`)
+				console.log(`Message: ${message}`);
 				const isAddressValid = await verifyMessage({
 					message,
 					signature,
@@ -160,9 +200,14 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					return reply.status(400).send({ error: "Invalid webhook URL" });
 				}
 
-				const merchant = await createMerchant({ name, address, webhookUrl, chainIds });
+				const merchant = await createMerchant({
+					name,
+					address,
+					webhookUrl,
+					chainIds,
+				});
 
-				console.table(merchant)
+				console.table(merchant);
 
 				const token = await reply.jwtSign({ merchantId: merchant.id });
 				return { merchant, token };
@@ -181,14 +226,14 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		async (request, reply) => {
 			const { from, to, amount, token, chainId, extId, merchantId, signature } =
 				request.body;
-			
-			console.log("/payment-intents: ")
-			console.table(request.body)
+
+			console.log("/payment-intents: ");
+			console.table(request.body);
 
 			try {
 				// Verify signature
 				const message = `Create payment intent: to=${to} amount=${amount} token=${token} chainId=${chainId} extId=${extId}`;
-				console.log(`Message: ${message}`)
+				console.log(`Message: ${message}`);
 				const isAddressValid = verifyMessage({
 					message,
 					signature,
@@ -207,8 +252,8 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					chainId,
 					token,
 				});
-				
-				console.table(existingPayment)
+
+				console.table(existingPayment);
 
 				if (existingPayment) {
 					return reply
@@ -223,11 +268,11 @@ export default async function paymentApi(fastify: FastifyInstance) {
 					token,
 					chainId,
 					extId,
-					merchantId
+					merchantId,
 				});
 
-				console.log("Payment intent: ")
-				console.table(paymentIntent)
+				console.log("Payment intent: ");
+				console.table(paymentIntent);
 
 				return { paymentIntent };
 			} catch (error) {
@@ -278,6 +323,16 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		}
 	});
 
+	fastify.get(
+		"/auth-test",
+		{ onRequest: [fastify.authenticate] },
+		async (request, reply) => {
+			console.log("User auth test");
+			console.table(request.user);
+			return { user: request.user };
+		},
+	);
+
 	// Get merchant payments
 	fastify.get(
 		"/payments",
@@ -286,13 +341,12 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		},
 		async (request, reply) => {
 			try {
-
-        if(request.merchant === undefined) {
-          return reply.status(500).send({ error: "Failed to fetch payments" });
-        }
+				if (request.merchant === undefined) {
+					return reply.status(500).send({ error: "Failed to fetch payments" });
+				}
 				const payments = await getMerchantPaymentsPaginated({
-          merchantId: request.merchant.id,
-        })
+					merchantId: request.merchant.id,
+				});
 				return payments;
 			} catch (error) {
 				return reply.status(500).send({ error: "Failed to fetch payments" });
