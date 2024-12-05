@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Payment System Demo</title>
+    <style>
+        .section {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            margin: 5px;
+        }
+
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+        }
+
+        .result {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="section">
+        <h2>Merchant Actions</h2>
+        <div>
+            <h3>Signup</h3>
+            <input id="merchantName" placeholder="Merchant Name">
+            <input id="webhookUrl" placeholder="Webhook URL">
+            <button onclick="handleMerchantSignup()">Signup</button>
+            <pre id="signupResult" class="result"></pre>
+        </div>
+
+        <div>
+            <h3>Login</h3>
+            <button onclick="handleMerchantLogin()">Login</button>
+            <pre id="loginResult" class="result"></pre>
+        </div>
+
+        <div>
+            <h3>Get Payments</h3>
+            <button onclick="handleGetPayments()">Get Payments</button>
+            <pre id="paymentsResult" class="result"></pre>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Customer Actions</h2>
+
+        <div>
+            <h3>Login</h3>
+            <button onclick="handleClientLogin()">Login</button>
+            <pre id="loginResult" class="result"></pre>
+        </div>
+
+        <div>
+            <h3>Create Payment Intent</h3>
+            <input id="toAddress" placeholder="To Address (0x...)">
+            <input id="amount" type="number" placeholder="Amount">
+            <input id="tokenAddress" placeholder="Token Address (0x...)">
+            <input id="chainId" type="number" placeholder="Chain ID">
+            <input id="extId" placeholder="External ID">
+            <input id="merchantId" placeholder="Merchant ID">
+            <button onclick="handleCreatePayment()">Create Payment</button>
+            <button id="payButton" onclick="handlePay()" style="display: none;">Pay</button>
+            <pre id="paymentResult" class="result"></pre>
+            <pre id="payResult" class="result"></pre>
+        </div>
+
+        <div>
+            <h3>Get Payments</h3>
+            <button onclick="getClientPayments()">Get Payments</button>
+            <pre id="payments" class="result"></pre>
+        </div>
+
+        <div></div>
+
+        <div>
+            <h3>Cancel Payment Intent</h3>
+            <input id="paymentId" placeholder="Payment Intent ID">
+            <button onclick="handleCancelPayment()">Cancel Payment</button>
+            <pre id="cancelResult" class="result"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import {
+            merchantSignup,
+            merchantLogin,
+            getMerchantPayments,
+            createPaymentIntent,
+            getClientPayments,
+            cancelPaymentIntent
+        } from './payitonchain-client-lib.js';
+
+        const BASE_URL = 'http://localhost:3000';
+        let currentToken = null;
+
+        window.handleMerchantSignup = async () => {
+            try {
+                const result = await merchantSignup(BASE_URL, {
+                    name: document.getElementById('merchantName').value,
+                    webhookUrl: document.getElementById('webhookUrl').value,
+                    chainIds: [10]
+                });
+
+                console.log(result);
+                currentToken = result.token;
+                document.getElementById('signupResult').textContent = currentToken;
+            } catch (error) {
+                document.getElementById('signupResult').textContent = error.message;
+            }
+        };
+
+        window.handleMerchantLogin = async () => {
+            try {
+                const result = await merchantLogin(BASE_URL);
+                currentToken = result.token;
+                document.getElementById('loginResult').textContent = JSON.stringify(result, null, 2);
+                const eventSource = new EventSource(`${BASE_URL}/client/payments/updates`, {
+                    headers: {
+                        Authorization: `Bearer ${currentToken}`
+                    }
+                });
+
+            } catch (error) {
+                document.getElementById('loginResult').textContent = error.message;
+            }
+        };
+
+        window.handleClientLogin = async () => {
+            try {
+                const result = await clientLogin(BASE_URL);
+                currentToken = result.token;
+                document.getElementById('loginResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('loginResult').textContent = error.message;
+            }
+        }
+
+        window.handleGetPayments = async () => {
+            try {
+                const payments = await getMerchantPayments(BASE_URL, currentToken);
+                document.getElementById('paymentsResult').textContent = JSON.stringify(payments, null, 2);
+            } catch (error) {
+                document.getElementById('paymentsResult').textContent = error.message;
+            }
+        };
+
+        window.handleCreatePayment = async () => {
+            try {
+                const result = await createPaymentIntent(BASE_URL, {
+                    to: document.getElementById('toAddress').value,
+                    amount: Number(document.getElementById('amount').value),
+                    token: document.getElementById('tokenAddress').value,
+                    chainId: Number(document.getElementById('chainId').value),
+                    extId: document.getElementById('extId').value,
+                    merchantId: document.getElementById('merchantId').value
+                });
+                document.getElementById('paymentResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('paymentResult').textContent = error.message;
+            }
+        };
+
+        window.handleCancelPayment = async () => {
+            try {
+                const result = await cancelPaymentIntent(BASE_URL, document.getElementById('paymentId').value);
+                document.getElementById('cancelResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('cancelResult').textContent = error.message;
+            }
+        };
+
+        window.getClientPayments = async () => {
+            try {
+                const payments = await getClientPayments(BASE_URL);
+                document.getElementById('payments').textContent = JSON.stringify(payments, null, 2);
+            } catch (error) {
+                document.getElementById('payments').textContent = error.message;
+            }
+        }
+
+    </script>
+</body>
+
+</html>
