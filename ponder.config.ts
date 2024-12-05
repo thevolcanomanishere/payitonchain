@@ -37,6 +37,7 @@ export default createConfig({
         optimism: {
           address: "0x57dEF52ABb90062cfaA90b5d6b0C9339AE122ABF",
           startBlock: 128814387,
+
         }
       }
     },

@@ -15,13 +15,21 @@ import {
 import { type Address, getAddress, verifyMessage } from "viem";
 import { createMerchant } from "../src/db";
 import { differenceInHours } from "date-fns";
+import fastifyCors from "@fastify/cors";
+import FastifySSEPlugin from "fastify-sse-v2";
+import { fastifyCookie } from "@fastify/cookie";
 
 declare module "fastify" {
 	interface FastifyRequest {
 		merchant?: Merchant;
+		client?: { address: Address };
 	}
 	interface FastifyInstance {
-		authenticate: (
+		authenticateMerchant: (
+			request: FastifyRequest,
+			reply: FastifyReply,
+		) => Promise<void>;
+		authenticateClient: (
 			request: FastifyRequest,
 			reply: FastifyReply,
 		) => Promise<void>;
@@ -75,16 +83,33 @@ interface CancelPaymentIntentBody {
 	signature: Address;
 }
 
+const clientSSEMap = new Map<Address, FastifyReply>();
+
 // Fastify plugin
 export default async function paymentApi(fastify: FastifyInstance) {
 	// JWT setup
 	await fastify.register(fastifyJwt, {
 		secret: "dasecretpasswordbombaclat",
+		cookie: {
+			cookieName: "token",
+			signed: false
+		}
 	});
+
+	await fastify.register(fastifyCookie, {
+		secret: "dasecretpasswordbombaclat",
+		
+	})
+
+	await fastify.register(fastifyCors, {
+		origin: "*",
+	});
+
+	await fastify.register(FastifySSEPlugin);
 
 	// Auth decorator
 	fastify.decorate(
-		"authenticate",
+		"authenticateMerchant",
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
 				console.log(`Authenticate: ${JSON.stringify(request.headers)}`);
@@ -96,6 +121,19 @@ export default async function paymentApi(fastify: FastifyInstance) {
 				console.log(`Merchant: ${JSON.stringify(merchant)}`);
 				if (!merchant) throw new Error("Merchant not found");
 				request.merchant = merchant;
+			} catch (err) {
+				await reply.status(401).send({ error: "Authentication failed" });
+			}
+		},
+	);
+
+	fastify.decorate(
+		"authenticateClient",
+		async (request: FastifyRequest, reply: FastifyReply) => {
+			try {
+				console.log(`Authenticate: ${JSON.stringify(request.headers)}`);
+				await request.jwtVerify();
+				request.client = { address: request.user as Address };
 			} catch (err) {
 				await reply.status(401).send({ error: "Authentication failed" });
 			}
@@ -114,7 +152,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 
 		console.log(`Nonce: ${record.nonce}`);
 
-		return record.nonce;
+		return { nonce: record.nonce };
 	});
 
 	fastify.post<{
@@ -323,13 +361,82 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		}
 	});
 
+	fastify.get<{
+		Params: {
+			address: Address;
+		};
+	}>("/client/payments/:address", {}, async (request, reply) => {
+		const { address } = request.params;
+
+		return db.payment_intent.findMany({
+			where: {
+				from: getAddress(address),
+			},
+		});
+	});
+
+	fastify.post<{
+		Body: {
+			address: Address;
+			signature: Address;
+			nonce: string;
+		};
+	}>("client/login", {}, async (request, reply) => {
+		const { address, signature, nonce } = request.body;
+
+		const message = `Login for address ${address} with nonce ${nonce}`;
+		const isAddressValid = await verifyMessage({
+			message,
+			signature,
+			address,
+		});
+
+		if (!isAddressValid) {
+			return reply.status(400).send({ error: "Invalid signature" });
+		}
+
+		await db.nonce.update({
+			where: {
+				nonce,
+			},
+			data: {
+				used: new Date(),
+			},
+		});
+
+		const token = await reply.jwtSign({ address });
+		return { token };
+	});
+
 	fastify.get(
-		"/auth-test",
-		{ onRequest: [fastify.authenticate] },
+		"/client/payments/updates",
+		{
+			onRequest: [fastify.authenticateClient],
+		},
 		async (request, reply) => {
-			console.log("User auth test");
-			console.table(request.user);
-			return { user: request.user };
+			if (request.client === undefined) {
+				return reply.status(500).send({ error: "Failed to fetch updates" });
+			}
+			const { address } = request.client;
+
+			request.raw.on("close", () => {
+				console.log(`Total clients: ${clientSSEMap.size}`);
+				clientSSEMap.delete(address);
+			});
+
+			const allPayments = await db.payment_intent.findMany({
+				where: {
+					from: getAddress(address),
+				},
+			});
+
+			reply.sse({
+				event: "connect",
+				data: JSON.stringify(allPayments),
+			});
+
+			clientSSEMap.set(address, reply);
+			console.log(`Total clients: ${clientSSEMap.size}`);
 		},
 	);
 
@@ -337,7 +444,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 	fastify.get(
 		"/payments",
 		{
-			onRequest: [fastify.authenticate],
+			onRequest: [fastify.authenticateMerchant],
 		},
 		async (request, reply) => {
 			try {
