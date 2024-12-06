@@ -67,7 +67,7 @@
             <input id="extId" placeholder="External ID">
             <input id="merchantId" placeholder="Merchant ID">
             <button onclick="handleCreatePayment()">Create Payment</button>
-            <button id="payButton" onclick="handlePay()" style="display: none;">Pay</button>
+            <button id="payButton" onclick="handlePay()">Pay</button>
             <pre id="paymentResult" class="result"></pre>
             <pre id="payResult" class="result"></pre>
         </div>
@@ -94,12 +94,14 @@
             merchantLogin,
             getMerchantPayments,
             createPaymentIntent,
+            payPaymentIntent,
             getClientPayments,
             cancelPaymentIntent
         } from './payitonchain-client-lib.js';
 
         const BASE_URL = 'http://localhost:3000';
         let currentToken = null;
+        let paymentIntent = null;
 
         window.handleMerchantSignup = async () => {
             try {
@@ -162,11 +164,28 @@
                     extId: document.getElementById('extId').value,
                     merchantId: document.getElementById('merchantId').value
                 });
+
+                paymentIntent = result;
                 document.getElementById('paymentResult').textContent = JSON.stringify(result, null, 2);
+
+                const es = new EventSource(`${BASE_URL}/client/payments/updates/${result.paymentIntent.from}`);
+
+                es.onmessage = (event) => {
+                    console.log(event.data);
+                };
             } catch (error) {
                 document.getElementById('paymentResult').textContent = error.message;
             }
         };
+
+        window.handlePay = async () => {
+            try {
+                const result = await payPaymentIntent(BASE_URL, paymentIntent);
+                document.getElementById('payResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('payResult').textContent = error.message;
+            }
+        }
 
         window.handleCancelPayment = async () => {
             try {

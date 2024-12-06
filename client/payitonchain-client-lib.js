@@ -125,13 +125,16 @@ const signMessage = async (message) => {
 
   export const payPaymentIntent = async (baseUrl, { paymentIntent }) => {
     if (!window.ethereum) throw new Error('Ethereum provider not found');
+
+    // multipley by 10^18 to convert to wei
+    const adjustedAmount = paymentIntent.amount * 10**18;
   
     const tx = await window.ethereum.request({
       method: 'eth_sendTransaction',
       params: [{
         from: paymentIntent.from,
         to: paymentIntent.token, // token contract address
-        data: generateERC20TransferData(paymentIntent.to, paymentIntent.amount),
+        data: generateERC20TransferData(paymentIntent.to, adjustedAmount),
         value: '0x0'
       }]
     });
@@ -139,21 +142,23 @@ const signMessage = async (message) => {
     return tx;
   };
 
+    // Utility function to generate ERC20 transfer data
+    function generateERC20TransferData(to, amount) {
+      // ERC20 transfer function signature + encoded parameters
+      const functionSignature = '0xa9059cbb';
+      const paddedAddress = to.slice(2).padStart(64, '0');
+      const paddedAmount = amount.toString(16).padStart(64, '0');
+      return `${functionSignature}${paddedAddress}${paddedAmount}`;
+    }
+    
+
   export const getClientPayments = async (baseUrl) => {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     const from = accounts[0];
     return fetchJson(baseUrl, `/client/payments/${from}`);
   }
   
-  // Utility function to generate ERC20 transfer data
-  function generateERC20TransferData(to, amount) {
-    // ERC20 transfer function signature + encoded parameters
-    const functionSignature = '0xa9059cbb';
-    const paddedAddress = to.slice(2).padStart(64, '0');
-    const paddedAmount = amount.toString(16).padStart(64, '0');
-    return `${functionSignature}${paddedAddress}${paddedAmount}`;
-  }
-  
+
   export const getMerchantPayments = async (baseUrl, token) => {
     return fetchJson(baseUrl, '/payments', { token });
   };

@@ -1,24 +1,25 @@
 import { Queue, Worker } from "bullmq";
 import type { transfers } from "../ponder.schema";
 import { db, matchTransferToPaymentIntent, setupDb } from "../src/db";
-import { PaymentIntentStatus } from "@prisma/client";
+import { type payment_intent, PaymentIntentStatus } from "@prisma/client";
 import { redisQueueConnection } from "./redisSetup";
 import axios from "axios";
 import { toReadableNumber } from "../utils/numbers";
-
 
 export const fireWebhookQueue = new Queue("fireWebhookQueue", {
 	connection: redisQueueConnection,
 });
 
-type TransferType = Omit<typeof transfers.$inferSelect, "amount"> & {amount: string};
+type TransferType = Omit<typeof transfers.$inferSelect, "amount"> & {
+	amount: string;
+};
 
 export const processTransferQueueWorker = new Worker<TransferType>(
 	"processTransferQueue",
 	async (job) => {
 		const { from, to, amount, chainId, token, hash } = job.data;
 
-		console.table(job.data)
+		console.table(job.data);
 
 		await db.$transaction(async (prismaInstance) => {
 			const amountConverted = toReadableNumber(amount, token);
@@ -37,7 +38,9 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 				return `No payment intent found for transfer ${hash}`;
 			}
 
-			console.log(`Matched transfer ${hash} to payment intent ${paymentIntent.id}`);
+			console.log(
+				`Matched transfer ${hash} to payment intent ${paymentIntent.id}`,
+			);
 
 			const updatedPaymentIntent = await prismaInstance.payment_intent.update({
 				where: {
@@ -48,7 +51,9 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 				},
 			});
 
-			console.log(`Updated payment intent ${updatedPaymentIntent.id} to status ${updatedPaymentIntent.status}`);
+			console.log(
+				`Updated payment intent ${updatedPaymentIntent.id} to status ${updatedPaymentIntent.status}`,
+			);
 
 			await fireWebhookQueue.add("fireWebhook", updatedPaymentIntent);
 		});
@@ -58,9 +63,7 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 	},
 );
 
-
-
-export const fireWebhookQueueWorker = new Worker(
+export const fireWebhookQueueWorker = new Worker<payment_intent>(
 	"fireWebhookQueue",
 	async (job) => {
 		const merchant = await db.merchant.findUnique({
@@ -78,6 +81,8 @@ export const fireWebhookQueueWorker = new Worker(
 		const { webhookUrl } = merchant;
 
 		await axios.post(webhookUrl, job.data);
+
+		return job.data;
 	},
 	{
 		connection: redisQueueConnection,

@@ -17,7 +17,9 @@ import { createMerchant } from "../src/db";
 import { differenceInHours } from "date-fns";
 import fastifyCors from "@fastify/cors";
 import FastifySSEPlugin from "fastify-sse-v2";
-import { fastifyCookie } from "@fastify/cookie";
+import { QueueEvents } from "bullmq";
+import { redisQueueConnection } from "../workers/redisSetup";
+import type { payment_intent } from "@prisma/client";
 
 declare module "fastify" {
 	interface FastifyRequest {
@@ -85,21 +87,41 @@ interface CancelPaymentIntentBody {
 
 const clientSSEMap = new Map<Address, FastifyReply>();
 
+const qEvents = new QueueEvents("fireWebhookQueue", {
+	connection: redisQueueConnection,
+});
+
+qEvents.on("completed", async (jobId) => {
+	const jobData = jobId.returnvalue as unknown as payment_intent;
+	console.log(`Job completed: ${jobData.id}`);
+	console.table(jobData);
+	const { from } = jobData;
+
+	const client = clientSSEMap.get(from as Address);
+
+	if (client) {
+		client.sse({
+			event: "update",
+			data: JSON.stringify(jobData),
+		});
+	}
+});
+
 // Fastify plugin
 export default async function paymentApi(fastify: FastifyInstance) {
 	// JWT setup
 	await fastify.register(fastifyJwt, {
 		secret: "dasecretpasswordbombaclat",
-		cookie: {
-			cookieName: "token",
-			signed: false
-		}
+		// cookie: {
+		// 	cookieName: "token",
+		// 	signed: false
+		// }
 	});
 
-	await fastify.register(fastifyCookie, {
-		secret: "dasecretpasswordbombaclat",
-		
-	})
+	// await fastify.register(fastifyCookie, {
+	// 	secret: "dasecretpasswordbombaclat",
+
+	// })
 
 	await fastify.register(fastifyCors, {
 		origin: "*",
@@ -381,7 +403,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 			signature: Address;
 			nonce: string;
 		};
-	}>("client/login", {}, async (request, reply) => {
+	}>("/client/login", {}, async (request, reply) => {
 		const { address, signature, nonce } = request.body;
 
 		const message = `Login for address ${address} with nonce ${nonce}`;
@@ -408,37 +430,32 @@ export default async function paymentApi(fastify: FastifyInstance) {
 		return { token };
 	});
 
-	fastify.get(
-		"/client/payments/updates",
-		{
-			onRequest: [fastify.authenticateClient],
-		},
-		async (request, reply) => {
-			if (request.client === undefined) {
-				return reply.status(500).send({ error: "Failed to fetch updates" });
-			}
-			const { address } = request.client;
+	fastify.get<{
+		Params: {
+			address: Address;
+		};
+	}>("/client/payments/updates/:address", {}, async (request, reply) => {
+		const { address } = request.params;
 
-			request.raw.on("close", () => {
-				console.log(`Total clients: ${clientSSEMap.size}`);
-				clientSSEMap.delete(address);
-			});
-
-			const allPayments = await db.payment_intent.findMany({
-				where: {
-					from: getAddress(address),
-				},
-			});
-
-			reply.sse({
-				event: "connect",
-				data: JSON.stringify(allPayments),
-			});
-
-			clientSSEMap.set(address, reply);
+		request.raw.on("close", () => {
 			console.log(`Total clients: ${clientSSEMap.size}`);
-		},
-	);
+			clientSSEMap.delete(address);
+		});
+
+		const allPayments = await db.payment_intent.findMany({
+			where: {
+				from: getAddress(address),
+			},
+		});
+
+		reply.sse({
+			event: "connect",
+			data: JSON.stringify(allPayments),
+		});
+
+		clientSSEMap.set(getAddress(address), reply);
+		console.log(`Total clients: ${clientSSEMap.size}`);
+	});
 
 	// Get merchant payments
 	fastify.get(
