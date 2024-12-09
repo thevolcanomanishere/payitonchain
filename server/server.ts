@@ -12,7 +12,7 @@ import {
 	getMerchantPaymentsPaginated,
 	getPaymentIntent,
 } from "../src/db"; // Connection to your Ponder database
-import { type Address, getAddress, verifyMessage } from "viem";
+import { type Address, getAddress, isAddressEqual, verifyMessage } from "viem";
 import { createMerchant } from "../src/db";
 import { differenceInHours } from "date-fns";
 import fastifyCors from "@fastify/cors";
@@ -357,7 +357,7 @@ export default async function paymentApi(fastify: FastifyInstance) {
 				return reply.status(404).send({ error: "Payment intent not found" });
 			}
 
-			if (paymentIntent.from.toLowerCase() !== from.toLowerCase()) {
+			if (!isAddressEqual(paymentIntent.from as Address, from)) {
 				return reply.status(403).send({ error: "Unauthorized" });
 			}
 

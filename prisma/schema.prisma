@@ -46,14 +46,14 @@ model payment_intent {
   updatedAt  DateTime            @updatedAt
   merchantId String
   merchant   merchant            @relation(fields: [merchantId], references: [id])
+  hash       String?
 
   @@unique([from, to, amount, token, chainId, status])
 }
 
-
 model nonce {
-  id        String   @id @default(cuid())
-  nonce     String   @unique
-  used      DateTime? 
-  createdAt DateTime @default(now())
+  id        String    @id @default(cuid())
+  nonce     String    @unique
+  used      DateTime?
+  createdAt DateTime  @default(now())
 }

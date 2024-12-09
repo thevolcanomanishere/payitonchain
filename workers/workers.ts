@@ -48,6 +48,7 @@ export const processTransferQueueWorker = new Worker<TransferType>(
 				},
 				data: {
 					status: PaymentIntentStatus.COMPLETE,
+					hash,
 				},
 			});
 
@@ -80,9 +81,11 @@ export const fireWebhookQueueWorker = new Worker<payment_intent>(
 
 		const { webhookUrl } = merchant;
 
+		// TODO: Add message signing to the payload
+
 		await axios.post(webhookUrl, job.data);
 
-		return job.data;
+		return job.data; 
 	},
 	{
 		connection: redisQueueConnection,
