@@ -1,3 +1,26 @@
+# What is PayItOnChain?
+
+PayItOnChain is a self-hosted payment processing service that enables merchants to accept blockchain payments for off-chain products and services. Think of it as a "Stripe for blockchain" that you can run yourself.
+
+## Core Features
+
+- **On-chain payments for off-chain items**: Accept cryptocurrency payments for physical goods, digital downloads, services, or subscriptions
+- **Multi-chain support**: Process payments across multiple EVM-compatible blockchains (Ethereum, Polygon, etc.)
+- **Merchant dashboard**: Track payments, verify transactions, and manage your store
+- **Webhook notifications**: Get real-time updates when payments are received
+- **Payment intent system**: Create and track payment intents similar to traditional payment processors
+- **Self-hosted**: Maintain full control of your payment infrastructure without relying on third-party services
+
+## How It Works
+
+1. **Merchant registration**: Create a merchant account by signing a message with your wallet
+2. **Payment intent creation**: Generate payment details for customers with verification via signed messages
+3. **On-chain settlement**: Customers send tokens directly to your wallet address
+4. **Automatic verification**: The indexer detects and verifies blockchain transactions
+5. **Webhook notifications**: Your application receives notifications when payments are confirmed
+
+PayItOnChain bridges the gap between blockchain payments and traditional e-commerce, allowing merchants to accept cryptocurrency payments while maintaining the same level of control and visibility as traditional payment processors.
+
 ## PayItOnChain Backend Example
 
 ```mermaid
