@@ -1,4 +1,4 @@
-# What is PayItOnChain?
+# What is PayItOnChain? [WIP - Actively developing]
 
 PayItOnChain is a self-hosted payment processing service that enables merchants to accept blockchain payments for off-chain products and services. Think of it as a "Stripe for blockchain" that you can run yourself.
 
